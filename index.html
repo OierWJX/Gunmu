@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>游戏不良行为查询台</title>
+    <style>
+        :root {
+            --bg-color: #f4f7f6;
+            --primary-color: #2c3e50;
+            --btn-color: #e74c3c;
+            --btn-hover: #c0392b;
+            --card-bg: #ffffff;
+            --text-color: #333333;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            padding-top: 80px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            text-align: center;
+            color: var(--primary-color);
+            margin-bottom: 30px;
+        }
+
+        .search-box {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+        }
+
+        .search-box input {
+            flex: 1;
+            padding: 12px 15px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        .search-box input:focus {
+            border-color: var(--btn-color);
+        }
+
+        .search-box button {
+            padding: 12px 25px;
+            font-size: 16px;
+            background-color: var(--btn-color);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            white-space: nowrap;
+        }
+
+        .search-box button:hover {
+            background-color: var(--btn-hover);
+        }
+
+        #resultArea {
+            margin-top: 20px;
+        }
+
+        .player-card {
+            background: #fff8f8;
+            border-left: 5px solid var(--btn-color);
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 6px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+
+        .player-name {
+            font-size: 18px;
+            font-weight: bold;
+            color: var(--primary-color);
+            margin-bottom: 10px;
+        }
+
+        .player-desc {
+            font-size: 14px;
+            line-height: 1.5;
+            color: #555;
+            margin-bottom: 15px;
+        }
+
+        .tags-container {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .tag {
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            color: white;
+        }
+
+        /* 标签特殊颜色 */
+        .tag-rope { background-color: #f39c12; }    /* 烧绳 - 橙色 */
+        .tag-parade { background-color: #8e44ad; }  /* 阅兵 - 紫色 */
+        .tag-taunt { background-color: #e74c3c; }   /* 嘲讽 - 红色 */
+
+        .no-result {
+            text-align: center;
+            color: #7f8c8d;
+            padding: 20px;
+            font-size: 15px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>游戏不良行为查询</h1>
+        
+        <div class="search-box">
+            <input type="text" id="searchInput" placeholder="请输入玩家游戏ID进行搜索..." onkeypress="handleKeyPress(event)">
+            <button onclick="searchPlayer()">搜索</button>
+        </div>
+
+        <div id="resultArea">
+            <div class="no-result">输入玩家ID并点击搜索查询。</div>
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        // ⬇️ 玩家数据配置区（在这里手动添加玩家信息） ⬇️
+        // ==========================================
+        
+        const playerDatabase = [
+            
+            /* 
+            【添加说明】
+            要想添加玩家，请取消下方模板的注释（删除 /* 和 * /），
+            或者直接复制下方的大括号 {} 结构。
+            注意：如果有多个玩家，每个大括号 {} 之间必须用英文逗号 , 隔开！
+            */
+
+            /*
+            {
+                id: "这里写玩家ID",
+                description: "这里写具体的不良行为描述...",
+                tags: ["烧绳", "嘲讽"]  // 标签必须用英文双引号包裹，多个标签用逗号隔开
+            }
+            */
+            {
+                id: "图160#3673",
+                description: "在对局中阅兵，并嘲讽",
+                tags: ["阅兵", "嘲讽"]  // 标签必须用英文双引号包裹，多个标签用逗号隔开
+            }
+
+        ];
+
+        // ==========================================
+        // ⬆️ 玩家数据配置区结束 ⬆️
+        // ==========================================
+
+
+        // 标签颜色映射表
+        const tagClassMap = {
+            "烧绳": "tag-rope",
+            "阅兵": "tag-parade",
+            "嘲讽": "tag-taunt"
+        };
+
+        // 处理回车键搜索
+        function handleKeyPress(event) {
+            if (event.key === "Enter") {
+                searchPlayer();
+            }
+        }
+
+        // 搜索功能实现
+        function searchPlayer() {
+            const keyword = document.getElementById('searchInput').value.trim();
+            const resultArea = document.getElementById('resultArea');
+
+            if (!keyword) {
+                resultArea.innerHTML = '<div class="no-result">搜索内容不能为空，请输入玩家ID。</div>';
+                return;
+            }
+
+            // 模糊搜索：查找包含输入关键字的玩家
+            const results = playerDatabase.filter(player => player.id.includes(keyword));
+
+            if (results.length === 0) {
+                resultArea.innerHTML = `<div class="no-result">未查找到玩家 <b>${keyword}</b> 的记录。</div>`;
+                return;
+            }
+
+            // 生成搜索结果的 HTML
+            let htmlContent = '';
+            results.forEach(player => {
+                let tagsHtml = '';
+                player.tags.forEach(tag => {
+                    const cssClass = tagClassMap[tag] || "tag-taunt";
+                    tagsHtml += `<span class="tag ${cssClass}">${tag}</span>`;
+                });
+
+                htmlContent += `
+                    <div class="player-card">
+                        <div class="player-name">ID: ${player.id}</div>
+                        <div class="player-desc">${player.description}</div>
+                        <div class="tags-container">
+                            ${tagsHtml}
+                        </div>
+                    </div>
+                `;
+            });
+
+            resultArea.innerHTML = htmlContent;
+        }
+    </script>
+</body>
+</html>
